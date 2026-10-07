@@ -29,6 +29,8 @@
     .group { display: flex; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
     button { font: 500 .82rem 'Inter'; color: var(--muted); background: none; border: 0; padding: 7px 13px; border-radius: 7px; cursor: pointer; transition: all .18s; }
     button:hover { color: var(--text); background: rgba(255,255,255,.05); }
+    a.link { color: var(--accent); text-decoration: none; font-size: .85rem; margin-left: 10px; transition: opacity .2s; }
+    a.link:hover { opacity: .75; }
     button.active { color: #fff; background: rgba(124,140,255,.22); box-shadow: inset 0 0 0 1px rgba(124,140,255,.35); }
 
     .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
@@ -50,7 +52,7 @@
   <header>
     <div>
       <h1>WIN$ M5 · <span>Close − MME30</span></h1>
-      <p class="sub" id="periodo">—</p>
+      <p class="sub"><span id="periodo">—</span><a class="link" id="link-candles" href="mme30.html">Ver candles + MME30 →</a></p>
     </div>
     <div class="group" id="ranges">
       <button data-d="1" id="btn-1d">1D</button>
