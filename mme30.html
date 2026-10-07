@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WIN$ M5 · Distância até a MME30</title>
+  <meta name="description" content="Análise do mini índice WIN$ M5: distância em pontos da máxima, mínima e fechamento até a Média Móvel Exponencial de 30 períodos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    :root {
+      --bg: #0b0e17;
+      --panel: rgba(22, 27, 43, 0.72);
+      --border: rgba(120, 140, 200, 0.14);
+      --text: #e6e9f2;
+      --muted: #8a93ad;
+      --high: #22d3a6;
+      --low: #f4527a;
+      --close: #f5b84b;
+      --mme: #7c8cff;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(124, 140, 255, 0.16), transparent 60%),
+        radial-gradient(900px 500px at 110% 10%, rgba(34, 211, 166, 0.10), transparent 60%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 24px clamp(12px, 3vw, 36px) 40px;
+    }
+    header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    h1 { font-size: clamp(1.3rem, 2.4vw, 1.9rem); font-weight: 700; letter-spacing: -0.02em; }
+    h1 span { background: linear-gradient(90deg, var(--mme), var(--high)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+    .group { display: flex; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 3px; backdrop-filter: blur(10px); }
+    button {
+      font: 500 0.82rem 'Inter', sans-serif; color: var(--muted); background: transparent;
+      border: 0; padding: 7px 12px; border-radius: 7px; cursor: pointer; transition: all .18s ease;
+    }
+    button:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    button.active { color: #fff; background: rgba(124, 140, 255, 0.22); box-shadow: inset 0 0 0 1px rgba(124,140,255,.35); }
+    button.tog { display: flex; align-items: center; gap: 6px; }
+    button.tog i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    button.tog:not(.active) i { opacity: .25; }
+
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 18px; backdrop-filter: blur(12px); position: relative; overflow: hidden;
+      transition: transform .2s ease, border-color .2s ease; animation: rise .5s ease both;
+    }
+    .card:hover { transform: translateY(-2px); border-color: rgba(124,140,255,.35); }
+    .card::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--c); }
+    .card h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--c); margin-bottom: 10px; }
+    .card .big { font: 600 1.6rem 'JetBrains Mono', monospace; }
+    .card .big small { font-size: .75rem; color: var(--muted); font-family: 'Inter'; margin-left: 4px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 12px; margin-top: 12px; font-size: .78rem; }
+    .grid div { color: var(--muted); }
+    .grid b { display: block; color: var(--text); font: 500 .85rem 'JetBrains Mono', monospace; }
+
+    .chart-wrap {
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 10px; backdrop-filter: blur(12px); position: relative; animation: rise .6s ease both .1s;
+    }
+    #chart { width: 100%; height: calc(100vh - 330px); min-height: 520px; }
+    .legend {
+      position: absolute; top: 18px; left: 22px; z-index: 5; pointer-events: none;
+      font: 500 .78rem 'JetBrains Mono', monospace; display: flex; flex-wrap: wrap; gap: 4px 14px;
+      background: rgba(11,14,23,.6); padding: 6px 10px; border-radius: 8px;
+    }
+    .legend .k { color: var(--muted); }
+    .note { color: var(--muted); font-size: .78rem; margin-top: 12px; line-height: 1.5; }
+    #loading { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 50; transition: opacity .4s; }
+    .spin { width: 42px; height: 42px; border-radius: 50%; border: 3px solid rgba(124,140,255,.2); border-top-color: var(--mme); animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  </style>
+</head>
+<body>
+  <div id="loading"><div class="spin"></div></div>
+
+  <header>
+    <div>
+      <h1>WIN$ M5 · Distância até a <span>MME30</span></h1>
+      <p class="sub" id="periodo">—</p>
+    </div>
+    <div class="toolbar">
+      <div class="group" id="ranges">
+        <button data-d="1" id="btn-1d">1D</button>
+        <button data-d="5" id="btn-5d" class="active">5D</button>
+        <button data-d="22" id="btn-1m">1M</button>
+        <button data-d="66" id="btn-3m">3M</button>
+        <button data-d="0" id="btn-all">Tudo</button>
+      </div>
+      <div class="group">
+        <button class="tog active" data-s="high" id="tog-high"><i style="background:var(--high)"></i>Máxima</button>
+        <button class="tog active" data-s="low" id="tog-low"><i style="background:var(--low)"></i>Mínima</button>
+        <button class="tog active" data-s="close" id="tog-close"><i style="background:var(--close)"></i>Fechamento</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="cards" id="cards"></section>
+
+  <main class="chart-wrap">
+    <div class="legend" id="legend"></div>
+    <div id="chart"></div>
+  </main>
+
+  <p class="note">
+    Distância = Preço − MME30 (em pontos). Valores positivos: preço acima da média; negativos: abaixo.
+    As linhas tracejadas no painel inferior marcam os percentis 5% e 95% da distância do fechamento.
+    MME calculada continuamente sobre o fechamento (α = 2/31, semente = SMA dos 30 primeiros candles).
+    Obs.: a série contínua WIN$ possui saltos nas rolagens de contrato, o que gera picos isolados de distância.
+  </p>
+
+  <script src="mme30_data.js"></script>
+  <script>
+    const D = window.MME_DATA;
+    const LC = LightweightCharts;
+    const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const C = { high: css('--high'), low: css('--low'), close: css('--close'), mme: css('--mme') };
+    const fmt = v => (v > 0 ? '+' : '') + v.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+
+    document.getElementById('periodo').textContent =
+      `${D.inicio} → ${D.fim} · ${D.n.toLocaleString('pt-BR')} candles · MME de ${D.periodo} períodos`;
+
+    // ---- Cards de estatísticas ----
+    const nomes = { high: 'Máxima − MME30', low: 'Mínima − MME30', close: 'Fechamento − MME30' };
+    document.getElementById('cards').innerHTML = Object.entries(D.stats).map(([k, s], i) => `
+      <article class="card" style="--c:${C[k]}; animation-delay:${i * 80}ms">
+        <h3>${nomes[k]}</h3>
+        <div class="big">${s.media_abs.toLocaleString('pt-BR')}<small>pts · distância média absoluta</small></div>
+        <div class="grid">
+          <div>Média<b>${fmt(s.media)}</b></div>
+          <div>Mediana<b>${fmt(s.p50)}</b></div>
+          <div>Desvio<b>${s.desvio.toLocaleString('pt-BR')}</b></div>
+          <div>P5<b>${fmt(s.p05)}</b></div>
+          <div>P95<b>${fmt(s.p95)}</b></div>
+          <div>|P99|<b>${s.p99_abs.toLocaleString('pt-BR')}</b></div>
+        </div>
+      </article>`).join('');
+
+    // ---- Dados das séries ----
+    const candles = [], mme = [], dHigh = [], dLow = [], dClose = [];
+    for (let i = 0; i < D.n; i++) {
+      const time = D.t[i], m = D.m[i];
+      candles.push({ time, open: D.o[i], high: D.h[i], low: D.l[i], close: D.c[i] });
+      mme.push({ time, value: m });
+      dHigh.push({ time, value: +(D.h[i] - m).toFixed(1) });
+      dLow.push({ time, value: +(D.l[i] - m).toFixed(1) });
+      const dc = +(D.c[i] - m).toFixed(1);
+      dClose.push({ time, value: dc, color: dc >= 0 ? 'rgba(245,184,75,0.75)' : 'rgba(245,184,75,0.35)' });
+    }
+
+    // ---- Gráfico ----
+    const el = document.getElementById('chart');
+    const chart = LC.createChart(el, {
+      autoSize: true,
+      layout: {
+        background: { type: 'solid', color: 'transparent' }, textColor: '#8a93ad',
+        fontFamily: 'Inter', panes: { separatorColor: 'rgba(120,140,200,0.18)', enableResize: true },
+      },
+      grid: { vertLines: { color: 'rgba(120,140,200,0.06)' }, horzLines: { color: 'rgba(120,140,200,0.06)' } },
+      crosshair: { mode: LC.CrosshairMode.Normal },
+      rightPriceScale: { borderColor: 'rgba(120,140,200,0.15)' },
+      timeScale: { borderColor: 'rgba(120,140,200,0.15)', timeVisible: true, secondsVisible: false, rightOffset: 6 },
+      localization: { locale: 'pt-BR', priceFormatter: p => p.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) },
+    });
+
+    const sCandle = chart.addSeries(LC.CandlestickSeries, {
+      upColor: '#22d3a6', downColor: '#f4527a', borderVisible: false,
+      wickUpColor: '#22d3a6', wickDownColor: '#f4527a', priceLineVisible: false,
+    }, 0);
+    sCandle.setData(candles);
+
+    const sMme = chart.addSeries(LC.LineSeries, {
+      color: C.mme, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: 'MME30',
+    }, 0);
+    sMme.setData(mme);
+
+    const series = {
+      close: chart.addSeries(LC.HistogramSeries, { priceLineVisible: false, title: 'Fech', base: 0 }, 1),
+      high: chart.addSeries(LC.LineSeries, { color: C.high, lineWidth: 1, priceLineVisible: false, title: 'Máx' }, 1),
+      low: chart.addSeries(LC.LineSeries, { color: C.low, lineWidth: 1, priceLineVisible: false, title: 'Mín' }, 1),
+    };
+    series.close.setData(dClose);
+    series.high.setData(dHigh);
+    series.low.setData(dLow);
+
+    // Linhas de referência: zero (MME) e percentis do fechamento
+    const ref = (price, color, title, style = LC.LineStyle.Dashed) =>
+      series.close.createPriceLine({ price, color, lineWidth: 1, lineStyle: style, axisLabelVisible: true, title });
+    ref(0, C.mme, 'MME30', LC.LineStyle.Solid);
+    ref(D.stats.close.p95, 'rgba(245,184,75,0.7)', 'P95');
+    ref(D.stats.close.p05, 'rgba(245,184,75,0.7)', 'P5');
+
+    // Altura dos painéis
+    const ajustarPaineis = () => {
+      const panes = chart.panes?.();
+      if (panes && panes[1]?.setHeight) panes[1].setHeight(Math.round(el.clientHeight * 0.42));
+    };
+    ajustarPaineis();
+
+    // ---- Legenda dinâmica ----
+    const legend = document.getElementById('legend');
+    const renderLegend = idx => {
+      const i = idx ?? D.n - 1;
+      const m = D.m[i];
+      const dt = new Date(D.t[i] * 1000);
+      const data = dt.toLocaleString('pt-BR', { timeZone: 'UTC', dateStyle: 'short', timeStyle: 'short' });
+      legend.innerHTML = `
+        <span class="k">${data}</span>
+        <span><span class="k">C</span> ${D.c[i].toLocaleString('pt-BR')}</span>
+        <span style="color:${C.mme}"><span class="k">MME30</span> ${m.toLocaleString('pt-BR')}</span>
+        <span style="color:${C.high}">Máx ${fmt(D.h[i] - m)}</span>
+        <span style="color:${C.low}">Mín ${fmt(D.l[i] - m)}</span>
+        <span style="color:${C.close}">Fech ${fmt(D.c[i] - m)}</span>`;
+    };
+    const idxByTime = new Map(D.t.map((t, i) => [t, i]));
+    chart.subscribeCrosshairMove(p => renderLegend(p.time ? idxByTime.get(p.time) : null));
+    renderLegend();
+
+    // ---- Períodos ----
+    const setRange = dias => {
+      const ts = chart.timeScale();
+      if (!dias) return ts.fitContent();
+      // conta pregões (datas distintas) a partir do fim
+      let datas = 0, ultimo = null, i = D.n - 1;
+      for (; i >= 0; i--) {
+        const d = Math.floor(D.t[i] / 86400);
+        if (d !== ultimo) { datas++; ultimo = d; if (datas > dias) break; }
+      }
+      ts.setVisibleRange({ from: D.t[Math.max(0, i + 1)], to: D.t[D.n - 1] });
+    };
+    document.querySelectorAll('#ranges button').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('#ranges button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      setRange(+b.dataset.d);
+    }));
+    setRange(5);
+
+    // ---- Liga/desliga séries ----
+    document.querySelectorAll('.tog').forEach(b => b.addEventListener('click', () => {
+      b.classList.toggle('active');
+      series[b.dataset.s].applyOptions({ visible: b.classList.contains('active') });
+    }));
+
+    window.addEventListener('resize', ajustarPaineis);
+    const ld = document.getElementById('loading');
+    ld.style.opacity = 0; setTimeout(() => ld.remove(), 400);
+  </script>
+</body>
+</html>
